@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 
 // Initialize express app
 const app = express();
@@ -28,6 +29,7 @@ app.listen(PORT, () => {
     console.log(`Server is running on localhost:${PORT}`);
 });
 app.use(express.json())
+app.use(cookieParser());
 
 app.use('/',authRoutes)
 

@@ -1,6 +1,7 @@
 import express from 'express';
-import { DeliveryBoyreg, finalRegistration, verifyOTP } from '../controllers/authController.js';
+import { checkAuth, DeliveryBoyreg, finalRegistration, logindeliveryboy, verifyOTP } from '../controllers/authController.js';
 import {   upload } from '../config/multer.js';
+import { protectRouteuser } from '../middleware/authmiddleware.js';
 
 
 
@@ -21,5 +22,7 @@ router.post(
 
 
 
+router.post('/login',logindeliveryboy)
+router.get('/logindetails',protectRouteuser,checkAuth)
 
 export default router;

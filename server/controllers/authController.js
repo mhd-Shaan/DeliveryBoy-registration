@@ -4,7 +4,7 @@ import OtpVerification from "../models/otpSchema.js";
 import { sendOTP } from "../helpers/emailService.js";
 import { comparePassword, hashPassword } from "../helpers/auth.js";
 import tempboySchema from "../models/tempboySchema.js";
-
+import jwt from "jsonwebtoken";
 
 const router = express.Router();
 export const DeliveryBoyreg = async (req, res) => {
@@ -269,17 +269,17 @@ export const logindeliveryboy = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email) return res.status(400).json({ error: "email is required" });
-
-    const user = await DeliveryBoy.findOne({ email });
-    if (!user) return res.status(400).json({ error: "User is not exisiting" });
-
-    if (!password)
+   if (!password)
       return res.status(400).json({ error: "password is required" });
     if (!password || password.length < 6) {
       return res
         .status(400)
         .json({ error: "password must be at least 6 characters long" });
     }
+    const user = await DeliveryBoy.findOne({ email });
+    if (!user) return res.status(400).json({ error: "User is not exisiting" });
+
+ 
 
     const match = await comparePassword(password, user.password);
     if (!match) res.status(400).json({ error: "Enter correct password" });
@@ -311,4 +311,14 @@ res.status(200).json({
   }
 };
 
+export const checkAuth = async(req, res) => {
+  try {
+const user = await DeliveryBoy.findById(req.boy._id)   
+
+    res.status(200).json({user});
+  } catch (error) {
+    console.log("error from checkAuth", error.message);
+    res.status(500).json({ msg: error.message });
+  }
+};
 export default router;

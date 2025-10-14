@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken"
-import DeliveryRegistration from "../models/deliveryBoySchema";
+import DeliveryRegistration from "../models/deliveryBoySchema.js";
 
 const protectRouteuser = async (req, res, next) => {
 
