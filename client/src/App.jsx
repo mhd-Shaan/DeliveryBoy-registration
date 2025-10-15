@@ -19,9 +19,9 @@ function App() {
     <Router>
       <Toaster position="top-right" reverseOrder={false} />
       <Routes>
-        <Route path="/" element={<DeliveryBoyRegister />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/home" element={user?<Home />:<Login/>} />
+        <Route path="/" element={user? <Home/>:<DeliveryBoyRegister />} />
+        <Route path="/login" element={user? <Home/>:<Login />} />
+        <Route path="/dashboard" element={user? <Home />:<Login/>} />
       </Routes>
     </Router>
   );

@@ -5,6 +5,7 @@ import { sendOTP } from "../helpers/emailService.js";
 import { comparePassword, hashPassword } from "../helpers/auth.js";
 import tempboySchema from "../models/tempboySchema.js";
 import jwt from "jsonwebtoken";
+import Order from "../models/orderSchema.js";
 
 const router = express.Router();
 export const DeliveryBoyreg = async (req, res) => {
@@ -159,6 +160,162 @@ export const finalRegistration = async (req, res) => {
 };
 
 
+
+
+
+
+
+
+export const logindeliveryboy = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email) return res.status(400).json({ error: "email is required" });
+   if (!password)
+      return res.status(400).json({ error: "password is required" });
+    if (!password || password.length < 6) {
+      return res
+        .status(400)
+        .json({ error: "password must be at least 6 characters long" });
+    }
+    const user = await DeliveryBoy.findOne({ email });
+    if (!user) return res.status(400).json({ error: "User is not exisiting" });
+
+ 
+
+    const match = await comparePassword(password, user.password);
+    if (!match) res.status(400).json({ error: "Enter correct password" });
+
+    if (user.isBlocked)
+      return res
+        .status(403)
+        .json({ error: "Your account is blocked. Contact support." });
+
+// if (user.status !== 'approved') {
+//   return res.status(400).json({ 
+//     error: `Your account is currently ${user.status}` 
+//   });
+// }
+
+    jwt.sign({ id: user.id }, process.env.jwt_SECRET, {}, (err, token) => {
+      if (err) throw err;
+
+      res.cookie("token", token, {
+        httpOnly: true, // Prevents client-side JavaScript access
+        secure: true, // Ensures cookies are sent only over HTTPS (set to false in development)
+        sameSite: "Strict", // Helps prevent CSRF attacks
+        maxAge: 3600000, // 1 hour expiry
+      });
+res.status(200).json({
+  success: true,
+  message: "Login successful",
+  userdetails: {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+  },
+  token,
+});
+
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const checkAuth = async(req, res) => {
+  try {
+const user = await DeliveryBoy.findById(req.boy._id)   
+
+    res.status(200).json({user});
+  } catch (error) {
+    console.log("error from checkAuth", error.message);
+    res.status(500).json({ msg: error.message });
+  }
+};
+
+
+
+// Update delivery boy location
+export const updateLocation = async (req, res) => {
+  try {
+    const { lat, lng } = req.body;
+    const { id } = req.params;
+
+    const deliveryBoy = await DeliveryBoy.findById(id);
+    if (!deliveryBoy) return res.status(404).json({ message: "Delivery boy not found" });
+
+    deliveryBoy.location = {
+      type: "Point",
+      coordinates: [lng, lat],
+    };
+    deliveryBoy.isOnline = true;
+
+    await deliveryBoy.save();
+
+    res.json({ success: true, message: "Location updated successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+// Get current assigned order
+export const getCurrentOrder = async (req, res) => {
+  try {
+    const { id } = req.params; // delivery boy ID
+
+    const deliveryBoy = await DeliveryBoy.findById(id);
+    if (!deliveryBoy) return res.status(404).json({ message: "Delivery boy not found" });
+
+    if (!deliveryBoy.currentOrder) {
+      return res.json({ success: true, order: null });
+    }
+
+    const order = await Order.findById(deliveryBoy.currentOrder)
+      .populate("customerId", "name phone email") // optional: get customer info
+      .populate("storeId", "name address");       // optional: get store info
+
+    res.json({ success: true, order });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+// Auto-assign delivery boy (called by admin/backend)
+export const autoAssignDeliveryBoy = async (req, res) => {
+  try {
+    const { orderId, storeLat, storeLng } = req.body;
+
+    const nearestBoy = await DeliveryBoy.findOne({
+      isOnline: true,
+      status: "approved",
+      location: {
+        $near: {
+          $geometry: { type: "Point", coordinates: [storeLng, storeLat] },
+          $maxDistance: 5000,
+        },
+      },
+    });
+
+    if (!nearestBoy) return res.status(404).json({ message: "No delivery boy nearby" });
+
+    const order = await Order.findById(orderId);
+    order.assignedPartner = nearestBoy._id;
+    order.orderStatus = "Assigned";
+    await order.save();
+
+    nearestBoy.currentOrder = order._id;
+    nearestBoy.isOnline = false;
+    await nearestBoy.save();
+
+    res.json({ success: true, message: "Order auto-assigned successfully", partner: nearestBoy });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+
+
 // export const DeliveryBoyreg2 = async (req, res) => {
 //   try {
 //     const { email, password, district, pincode, address } = req.body;
@@ -260,65 +417,4 @@ export const finalRegistration = async (req, res) => {
 //   }
 // };
 
-
-
-
-
-export const logindeliveryboy = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email) return res.status(400).json({ error: "email is required" });
-   if (!password)
-      return res.status(400).json({ error: "password is required" });
-    if (!password || password.length < 6) {
-      return res
-        .status(400)
-        .json({ error: "password must be at least 6 characters long" });
-    }
-    const user = await DeliveryBoy.findOne({ email });
-    if (!user) return res.status(400).json({ error: "User is not exisiting" });
-
- 
-
-    const match = await comparePassword(password, user.password);
-    if (!match) res.status(400).json({ error: "Enter correct password" });
-
-
-    jwt.sign({ id: user.id }, process.env.jwt_SECRET, {}, (err, token) => {
-      if (err) throw err;
-
-      res.cookie("token", token, {
-        httpOnly: true, // Prevents client-side JavaScript access
-        secure: true, // Ensures cookies are sent only over HTTPS (set to false in development)
-        sameSite: "Strict", // Helps prevent CSRF attacks
-        maxAge: 3600000, // 1 hour expiry
-      });
-res.status(200).json({
-  success: true,
-  message: "Login successful",
-  userdetails: {
-    id: user._id,
-    name: user.name,
-    email: user.email,
-  },
-  token,
-});
-
-    });
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-export const checkAuth = async(req, res) => {
-  try {
-const user = await DeliveryBoy.findById(req.boy._id)   
-
-    res.status(200).json({user});
-  } catch (error) {
-    console.log("error from checkAuth", error.message);
-    res.status(500).json({ msg: error.message });
-  }
-};
 export default router;

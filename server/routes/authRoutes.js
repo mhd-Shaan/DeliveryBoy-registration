@@ -1,5 +1,5 @@
 import express from 'express';
-import { checkAuth, DeliveryBoyreg, finalRegistration, logindeliveryboy, verifyOTP } from '../controllers/authController.js';
+import { autoAssignDeliveryBoy, checkAuth, DeliveryBoyreg, finalRegistration, getCurrentOrder, logindeliveryboy, updateLocation, verifyOTP } from '../controllers/authController.js';
 import {   upload } from '../config/multer.js';
 import { protectRouteuser } from '../middleware/authmiddleware.js';
 
@@ -24,5 +24,11 @@ router.post(
 
 router.post('/login',logindeliveryboy)
 router.get('/logindetails',protectRouteuser,checkAuth)
+router.patch('/location/:id', protectRouteuser, updateLocation);
+router.get('/current-order/:id', protectRouteuser, getCurrentOrder);
+router.post('/auto-assign', autoAssignDeliveryBoy);
+
+
+
 
 export default router;
